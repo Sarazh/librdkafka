@@ -381,7 +381,7 @@ static void do_test_txn_broker_down_in_txn (rd_bool_t down_coord) {
         TEST_SAY(_C_MAG "[ Test %s down ]\n", down_what);
 
         rk = create_txn_producer(&mcluster, transactional_id, 3,
-                                 down_coord ? NULL : "msg,eos,broker");
+                                 down_coord ? NULL : "all");
 
         /* Broker down is not a test-failing error */
         allowed_error = RD_KAFKA_RESP_ERR__TRANSPORT;
