@@ -61,7 +61,7 @@ static int error_is_fatal_cb (rd_kafka_t *rk, rd_kafka_resp_err_t err,
  */
 static rd_kafka_t *create_txn_producer (rd_kafka_mock_cluster_t **mclusterp,
                                         const char *transactional_id,
-                                        int broker_cnt) {
+                                        int broker_cnt, const char *debug) {
         rd_kafka_conf_t *conf;
         rd_kafka_t *rk;
         char numstr[8];
@@ -72,6 +72,8 @@ static rd_kafka_t *create_txn_producer (rd_kafka_mock_cluster_t **mclusterp,
 
         test_conf_set(conf, "transactional.id", transactional_id);
         test_conf_set(conf, "test.mock.num.brokers", numstr);
+        if (debug)
+                test_conf_set(conf, "debug", debug);
         rd_kafka_conf_set_dr_msg_cb(conf, test_dr_msg_cb);
 
         test_curr->ignore_dr_err = rd_false;
@@ -102,7 +104,7 @@ static void do_test_txn_recoverable_errors (void) {
 
         TEST_SAY(_C_MAG "[ %s ]\n", __FUNCTION__);
 
-        rk = create_txn_producer(&mcluster, txnid, 3);
+        rk = create_txn_producer(&mcluster, txnid, 3, NULL);
 
         /* Make sure transaction and group coordinators are different.
          * This verifies that AddOffsetsToTxnRequest isn't sent to the
@@ -221,7 +223,7 @@ static void do_test_txn_requires_abort_errors (void) {
 
         TEST_SAY(_C_MAG "[ %s ]\n", __FUNCTION__);
 
-        rk = create_txn_producer(&mcluster, "txnid", 3);
+        rk = create_txn_producer(&mcluster, "txnid", 3, NULL);
 
         test_curr->ignore_dr_err = rd_true;
 
@@ -378,7 +380,8 @@ static void do_test_txn_broker_down_in_txn (rd_bool_t down_coord) {
 
         TEST_SAY(_C_MAG "[ Test %s down ]\n", down_what);
 
-        rk = create_txn_producer(&mcluster, transactional_id, 3);
+        rk = create_txn_producer(&mcluster, transactional_id, 3,
+                                 down_coord ? NULL : "msg,eos,broker");
 
         /* Broker down is not a test-failing error */
         allowed_error = RD_KAFKA_RESP_ERR__TRANSPORT;
@@ -465,7 +468,7 @@ static void do_test_txn_switch_coordinator (void) {
 
         TEST_SAY(_C_MAG "[ Test switching coordinators ]\n");
 
-        rk = create_txn_producer(&mcluster, transactional_id, broker_cnt);
+        rk = create_txn_producer(&mcluster, transactional_id, broker_cnt, NULL);
 
         coord_id = 1;
         rd_kafka_mock_coordinator_set(mcluster, "transaction", transactional_id,
