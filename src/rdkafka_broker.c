@@ -3409,6 +3409,14 @@ static int rd_kafka_toppar_producer_serve (rd_kafka_broker_t *rkb,
         if (unlikely(rktp->rktp_broker != rkb)) {
                 /* Currently migrating away from this
                  * broker. */
+                rd_rkb_dbg(rkb, EOS, "ABC1",
+                           "%d: toppar %s [%d] is on broker %s",
+                           __LINE__,
+                           rktp->rktp_rkt->rkt_topic->str,
+                           (int)rktp->rktp_partition,
+                           rktp->rktp_broker ?
+                           rd_kafka_broker_name(rktp->rktp_broker) : "none");
+
                 rd_kafka_toppar_unlock(rktp);
                 return 0;
         }
@@ -3429,6 +3437,8 @@ static int rd_kafka_toppar_producer_serve (rd_kafka_broker_t *rkb,
                                 /* If we don't have a PID, we can't transmit
                                  * any messages. */
                                 rd_kafka_toppar_unlock(rktp);
+                                rd_rkb_dbg(rkb, EOS, "ABC1",
+                                           "%d: pid is not valid", __LINE__);
                                 return 0;
 
                         } else if (timeoutcnt > 0) {
@@ -3536,6 +3546,13 @@ static int rd_kafka_toppar_producer_serve (rd_kafka_broker_t *rkb,
                                                 RD_KAFKAP_Produce, rktp,
                                                 RD_KAFKA_RESP_ERR__RETRY);
 
+                                rd_rkb_dbg(rkb, EOS, "ABC1",
+                                           "%d: toppar %s [%d] is awaiting inflight %d drains",
+                                           __LINE__,
+                                           rktp->rktp_rkt->rkt_topic->str,
+                                           (int)rktp->rktp_partition,
+                                           inflight);
+
                                 return 0;
                         }
 
@@ -3556,12 +3573,26 @@ static int rd_kafka_toppar_producer_serve (rd_kafka_broker_t *rkb,
 
 
         /* Check if allowed to create and enqueue a ProduceRequest */
-        if (max_requests <= 0)
+        if (max_requests <= 0) {
+                rd_rkb_dbg(rkb, EOS, "ABC1",
+                           "%d: toppar %s [%d] max_reqs %d",
+                           __LINE__,
+                           rktp->rktp_rkt->rkt_topic->str,
+                           (int)rktp->rktp_partition,
+                           max_requests);
                 return 0;
+        }
 
         r = rktp->rktp_xmit_msgq.rkmq_msg_cnt;
-        if (r == 0)
+        if (r == 0) {
+                rd_rkb_dbg(rkb, EOS, "ABC1",
+                           "%d: toppar %s [%d] queue %d",
+                           __LINE__,
+                           rktp->rktp_rkt->rkt_topic->str,
+                           (int)rktp->rktp_partition,
+                           r);
                 return 0;
+        }
 
         rd_kafka_msgq_verify_order(rktp, &rktp->rktp_xmit_msgq, 0, rd_false);
 
@@ -3583,8 +3614,14 @@ static int rd_kafka_toppar_producer_serve (rd_kafka_broker_t *rkb,
                          * are outstanding messages in-flight, in which case
                          * we eventually come back here to retry. */
                         if (!rd_kafka_toppar_pid_change(
-                                    rktp, pid, rkm->rkm_u.producer.msgid))
+                                    rktp, pid, rkm->rkm_u.producer.msgid)) {
+                                rd_rkb_dbg(rkb, EOS, "ABC1",
+                                           "%d: toppar %s [%d] pid changed",
+                                           __LINE__,
+                                           rktp->rktp_rkt->rkt_topic->str,
+                                           (int)rktp->rktp_partition);
                                 return 0;
+                        }
                 }
         }
 
